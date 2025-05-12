@@ -1,0 +1,900 @@
+<!doctype html>
+<html lang="pl">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet.css"><link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/font-awesome/4.6.1/css/font-awesome.min.css"><link rel="stylesheet" href="css/L.Control.Locate.min.css">
+		<link rel="preconnect" href="https://fonts.gstatic.com">
+		<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet"> 
+        <link rel="stylesheet" href="css/qgis2web.css">
+        <style>
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        </style>
+		<script src="js/jquery-3.5.1.min.js"></script>
+        <title>Drugie tury wyborów prezydenckich</title>
+    </head>
+    <body>
+        <div id="map">
+        </div>
+		
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script><script src="js/L.Control.Locate.min.js"></script>
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/leaflet.pattern.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+		<script src="js/tinyqueue.min.js"></script>
+		<script src="js/polylabel.js"></script>
+        <script src="data/Gminy_6.js"></script>
+		<script src="data/Powiaty_Simplified_6.js"></script>
+        <script src="data/Granicewojewdztw_5.js"></script>
+		<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+		<script src="js/leaflet.geometryutil.js"></script>
+		<script src="https://d3js.org/d3-color.v2.min.js"></script>
+		<script src="https://d3js.org/d3-interpolate.v2.min.js"></script>
+		<script src="js/d3-scale-chromatic.min.js"></script>
+        <script>
+
+
+		var tooltipThreshold = 9;
+		var zooms = [1,1.5,1.9,2.3,2.8];
+		var blend_modes = ['normal','normal','normal','darken','multiply','multiply'];
+		var bounds_group = new L.featureGroup([]);
+        /*function setBounds() {
+        }*/
+		
+		/*map.on('zoomstart', function (e){
+			var zoomLevel = map.getZoom();
+			//var tooltip = $('.leaflet-tooltip');
+
+			return zoomLevel+2;
+		});*/
+		
+		function numberWithSpaces(x) {
+			return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "&nbsp;");
+		}
+		
+		function lengthToBlank(number) {
+			var ntext = "";
+			var length = number.toString().length;
+			for (i=0; i<6-length; i++){
+				ntext = ntext + "&#8199;";
+			}
+			if (length<4) ntext = ntext + "&nbsp;";
+			return ntext;
+		}
+		
+		function lengthToBlank2(number) {
+			var ntext = "";
+			var length = number.toFixed(2).toString().length;
+			for (i=0; i<5-length; i++){
+				ntext = ntext + "&#8199;";
+			}
+			/*if (length<4) ntext = ntext + "&#8199;";*/
+			return ntext;
+		}
+		
+
+		
+		console.log(d3.interpolateRdGy(0.5));
+		console.log(d3.interpolateRdGy(0.55));
+		console.log(d3.interpolateRdGy(0.6));
+		console.log(d3.interpolateRdGy(0.65));
+        function pop_Gminy20(feature, layer) {
+			//console.log(feature);
+			var p = layer.feature.properties;
+			var mun_type = p.JPT_KOD_JE.substring(6, 7) !== "1"? 'gm. ' : 'm. ';
+			var a4 =feature.properties['pis20']/(feature.properties['po20']+feature.properties['pis20'])*100;
+			//console.log(a1);
+			var a3 =feature.properties['pis15']/(feature.properties['po15']+feature.properties['pis15'])*100;
+			var a2 =feature.properties['pis10']/(feature.properties['po10']+feature.properties['pis10'])*100;;
+			var a1 =feature.properties['pis05']/(feature.properties['po05']+feature.properties['pis05'])*100;;
+            var popupContent = ' <h2 style = "margin: 8px;">'+mun_type + String(feature.properties['JPT_NAZWA_'])+'</h2>\
+			<div>\
+			<div class = "big_pasek"><span class="year">2020</span><div class = "pasek" style = "background-image: linear-gradient( 90deg, #053061 0%, #053061 '+Number(a4).toFixed(1)+'%, #7f3b08 '+Number(a4).toFixed(1)+'%, #7f3b08 '+Number(a4).toFixed(1)+'%);"><span class = "PiS_k">A. Duda<br>'+Number(a4).toFixed(1)+'%</span><div class = "vl"></div><span class = "PO_k">R. Trzaskowski<br>'+Number(100-a4).toFixed(1)+'%</span><div style="clear:both;"></div></div></div>\
+			<div class = "big_pasek"><span class="year">2015</span><div class = "pasek" style = "background-image: linear-gradient( 90deg, #053061 0%, #053061 '+Number(a3).toFixed(1)+'%, #7f3b08 '+Number(a3).toFixed(1)+'%, #7f3b08 '+Number(a3).toFixed(1)+'%);"><span class = "PiS_k">A. Duda<br>'+Number(a3).toFixed(1)+'%</span><div class = "vl"></div><span class = "PO_k">B. Komorowski<br>'+Number(100-a3).toFixed(1)+'%</span><div style="clear:both;"></div></div></div>\
+			<div class = "big_pasek"><span class="year">2010</span><div class = "pasek" style = "background-image: linear-gradient( 90deg, #053061 0%, #053061 '+Number(a2).toFixed(1)+'%, #7f3b08 '+Number(a2).toFixed(1)+'%, #7f3b08 '+Number(a2).toFixed(1)+'%);"><span class = "PiS_k">J. Kaczyński<br>'+Number(a2).toFixed(1)+'%</span><div class = "vl"></div><span class = "PO_k">B. Komorowski<br>'+Number(100-a2).toFixed(1)+'%</span><div style="clear:both;"></div></div></div>\
+			<div class = "big_pasek"><span class="year">2005</span><div class = "pasek" style = "background-image: linear-gradient( 90deg, #053061 0%, #053061 '+Number(a1).toFixed(1)+'%, #7f3b08 '+Number(a1).toFixed(1)+'%, #7f3b08 '+Number(a1).toFixed(1)+'%);"><span class = "PiS_k">L. Kaczyński<br>'+Number(a1).toFixed(1)+'%</span><div class = "vl"></div><span class = "PO_k">D. Tusk<br>'+Number(100-a1).toFixed(1)+'%</span><div style="clear:both;"></div></div></div>\
+			\
+			<div>';
+            layer.bindPopup(popupContent, {maxHeight: 256});
+        }
+
+		
+		function pop_Okregi_KO(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td style="font-weight: bold;">' + 'Okręg wyborczy nr ' + (feature.properties['jpt_kod_je'] !== null ? Autolinker.link(String(feature.properties['jpt_kod_je'])) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Sejm_2019_L_mandat'] !== null ? Autolinker.link(String(feature.properties['Sejm_2019_L_mandat'])) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Sejm_2019_p2'] !== null ? Autolinker.link(String(feature.properties['Sejm_2019_p2'])) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Sejm_2019_m2'] !== null ? Autolinker.link(String(feature.properties['Sejm_2019_m2'])) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Sejm_2019_dm2'] !== null ? Autolinker.link(String(feature.properties['Sejm_2019_dm2'])) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent, {maxHeight: 800});
+        }
+
+        function style_Gminy20(feature) {
+			var p = feature.properties;
+            if (feature.properties['po20'] != 0 ) {
+                return {
+                /*pane: 'pane_Gminy20',*/
+                opacity: 1.0,
+                //color: feature.properties["rgb2010"],
+                color: 'rgba(64,64,64,'+(0.25+(a_zoom-5)*0.1)+')',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 0.32, 
+                fill: true,
+                fillOpacity: 1.0,
+				className: 'stroke-polyline',
+                fillColor: p['pis20']/(p['pis20']+p['po20'])>0.5?d3.interpolateBlues(Math.pow((p['pis20']/(p['pis20']+p['po20'])-0.5)*2,0.75)):d3.interpolateOranges(Math.pow((p['po20']/(p['pis20']+p['po20'])-0.5)*2,0.75))
+                //fillColor: '#ff8080'
+				}
+            }
+            /*if (feature.properties['Sejm_201_2'] >= -75.000000 && feature.properties['Sejm_201_2'] <= -50.000000 ) {
+                return {
+                pane: 'pane_Gminy20',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(237,110,67,1.0)',
+            }
+            }
+            if (feature.properties['Sejm_201_2'] >= -50.000000 && feature.properties['Sejm_201_2'] <= -25.000000 ) {
+                return {
+                pane: 'pane_Gminy20',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(254,186,110,1.0)',
+            }
+            }
+            if (feature.properties['Sejm_201_2'] >= -25.000000 && feature.properties['Sejm_201_2'] <= 0.000000 ) {
+                return {
+                pane: 'pane_Gminy20',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,232,164,1.0)',
+            }
+            }
+            if (feature.properties['Sejm_201_2'] >= 0.000000 && feature.properties['Sejm_201_2'] <= 25.000000 ) {
+                return {
+                pane: 'pane_Gminy20',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(231,245,203,1.0)',
+            }
+            }
+            if (feature.properties['Sejm_201_2'] >= 25.000000 && feature.properties['Sejm_201_2'] <= 50.000000 ) {
+                return {
+                pane: 'pane_Gminy20',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(183,223,227,1.0)',
+            }
+            }
+            if (feature.properties['Sejm_201_2'] >= 50.000000 && feature.properties['Sejm_201_2'] <= 75.000000 ) {
+                return {
+                pane: 'pane_Gminy20',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(117,177,211,1.0)',
+            }
+            }
+            if (feature.properties['Sejm_201_2'] >= 75.000000 && feature.properties['Sejm_201_2'] <= 100.000000 ) {
+                return {
+                pane: 'pane_Gminy20',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(44,123,182,1.0)',
+            }
+            }*/
+        }
+		
+		
+		function style_Gminy15(feature) {
+            var p = feature.properties;
+			if (feature.properties['po15'] != 0 ) {
+                return {
+                /*pane: 'pane_Gminy20',*/
+                opacity: 1.0,
+                //color: feature.properties["rgb2010"],
+                color: 'rgba(64,64,64,'+(0.25+(a_zoom-5)*0.1)+')',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 0.32, 
+                fill: true,
+                fillOpacity: 1.0,
+				className: 'stroke-polyline',
+                fillColor: p['pis15']/(p['pis15']+p['po15'])>0.5?d3.interpolateBlues(Math.pow((p['pis15']/(p['pis15']+p['po15'])-0.5)*2,0.75)):d3.interpolateOranges(Math.pow((p['po15']/(p['pis15']+p['po15'])-0.5)*2,0.75)),
+				}
+            }
+        }
+		
+		function style_Gminy10(feature) {
+            var p = feature.properties;
+			if (feature.properties['po10'] != 0 ) {
+                return {
+                /*pane: 'pane_Gminy20',*/
+                opacity: 1.0,
+                //color: feature.properties["rgb2010"],
+                color: 'rgba(64,64,64,'+(0.25+(a_zoom-5)*0.1)+')',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 0.32, 
+                fill: true,
+                fillOpacity: 1.0,
+				className: 'stroke-polyline',
+                fillColor: p['pis10']/(p['pis10']+p['po10'])>0.5?d3.interpolateBlues(Math.pow((p['pis10']/(p['pis10']+p['po10'])-0.5)*2,0.75)):d3.interpolateOranges(Math.pow((p['po10']/(p['pis10']+p['po10'])-0.5)*2,0.75)),
+				}
+            }
+        }
+		
+		function style_Gminy05(feature) {
+            var p = feature.properties;
+			if (feature.properties['po05'] != 0 ) {
+                return {
+                /*pane: 'pane_Gminy20',*/
+                opacity: 1.0,
+                //color: feature.properties["rgb2010"],
+                color: 'rgba(64,64,64,'+(0.25+(a_zoom-5)*0.1)+')',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 0.32, 
+                fill: true,
+                fillOpacity: 1.0,
+				className: 'stroke-polyline',
+                fillColor: p['pis05']/(p['pis05']+p['po05'])>0.5?d3.interpolateBlues(Math.pow((p['pis05']/(p['pis05']+p['po05'])-0.5)*2,0.75)):d3.interpolateOranges(Math.pow((p['po05']/(p['pis05']+p['po05'])-0.5)*2,0.75)),
+				}
+            }
+        }
+		
+
+		
+		var basemap0 = L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors,<a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
+            maxZoom: 10
+        });
+		
+		var basemap1 = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+			attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+			subdomains: 'abcd',
+			maxZoom: 10,
+			opacity: 1
+		});
+		
+		var map = L.map('map', {
+            zoomControl:true, maxZoom:10, minZoom:5, layers: [basemap1]
+        }).fitBounds([[48.7066734906,11.9596852528],[54.6789300376,27.5634833614]]);
+		map.setZoom(5);
+		var a_zoom = map.getZoom();
+		/*var map = L.map('map', {
+            zoomControl:true, maxZoom:10, minZoom:5, layers: [basemap1]
+        }).fitBounds([[48.7066734906,11.9596852528],[54.6789300376,27.5634833614]]);*/
+		
+		map.createPane('pane_Gminy20');
+		map.createPane('pane_Okregi_1');
+        map.getPane('pane_Gminy20').style.zIndex = 401;
+        map.getPane('pane_Gminy20').style['mix-blend-mode'] = 'normal';
+		
+		var layer_Gminy20 = new L.geoJson(json_Gminy_0, {
+            pane: 'pane_Gminy20',
+            onEachFeature: pop_Gminy20,
+            style: style_Gminy20
+        }).addTo(map);
+		
+		
+		
+		var layer_current = layer_Gminy20;
+		
+		layer_current.eachLayer(function(layer) {
+			onEachFeature(layer.feature, layer);
+		});
+		
+		//layer_current.addTo(map);
+		
+		function highlightFeature(e) {
+			const layer = e.target;
+			console.log(e);
+			const feature = e.target.feature;
+			console.log(feature);
+			layer.setStyle({
+				weight: 5,
+				color: '#f66',
+				dashArray: '',
+				fillOpacity: 0.7
+			});
+			//pop_Gminy20(feature, layer);
+			//layer.bringToFront();
+			setTimeout(function () {
+				layer.openPopup(/*e.latlng*/);
+			}, 250);
+			//this.openPopup(e.latlng);
+			//info.update(layer.feature.properties);
+		}
+
+		/* global statesData */
+		/*const geojson = L.geoJson(statesData, {
+			style,
+			onEachFeature
+		}).addTo(map);*/
+
+		function resetHighlight(e) {
+			layer_current.resetStyle(e.target);
+			this.closePopup();
+			//info.update();
+		}
+
+		function zoomToFeature(e) {
+			map.fitBounds(e.target.getBounds());
+			//this.openPopup();
+		}
+
+		function onEachFeature(feature, layer) {
+			layer.on({
+				mouseover: highlightFeature,
+				mouseout: resetHighlight,
+				click: zoomToFeature
+			});
+		}
+		
+		
+			
+		
+		
+		/*map.createPane('left');
+        map.createPane('right');*/
+		
+		map.createPane('labels');
+		map.getPane('labels').style.zIndex = 650;
+		map.getPane('labels').style.pointerEvents = 'none';
+		//map.getPane('labels').style.display = 'none';
+		
+		
+		
+		/*layer_Gminy20 = new L.geoJson(json_Gminy20, {
+            attribution: '<a href=""></a>',
+            pane: 'pane_Gminy20',
+            onEachFeature: pop_Gminy20,
+            style: style_Gminy20,
+        })*/;
+		
+		//map.addLayer(layer_Gminy20);
+		//map.addLayer(basemap0);
+		
+		map.createPane('pane_Okregi_KO');
+		map.createPane('pane_Okregi_1');
+		map.createPane('pane_Okregi_2');
+		map.createPane('pane_Okregi_3');
+		map.createPane('label21');
+        /*map.getPane('pane_Okregi_KO').style.zIndex = 400;*/
+		map.getPane('label21').style.zIndex = 650;
+        /*map.getPane('pane_Okregi_KO').style['mix-blend-mode'] = 'normal';*/
+		
+        
+		var layer_Gminy15 = new L.geoJson(json_Gminy_0, {
+            pane: 'pane_Gminy20',
+            onEachFeature: pop_Gminy20,
+            style: style_Gminy15,
+        })/*.addTo(map)*/;
+		
+		var layer_Gminy10 = new L.geoJson(json_Gminy_0, {
+            pane: 'pane_Gminy20',
+            onEachFeature: pop_Gminy20,
+            style: style_Gminy10,
+        })/*.addTo(map)*/;
+		
+		var layer_Gminy05 = new L.geoJson(json_Gminy_0, {
+            pane: 'pane_Gminy20',
+            onEachFeature: pop_Gminy20,
+            style: style_Gminy05,
+        })/*.addTo(map)*/;
+		
+		var powFront = 'rgba(96, 96, 96, 1.0)';
+		var powBack = 'rgba(240,240,240,0.4)';
+		var wojFront = 'rgba(80,80,80,1.0)';
+		var wojBack = 'rgba(255,255,255,0.6)';
+		
+		function style_Powiaty_Simplified_1_0() {
+            return {
+                pane: 'pane_Powiaty_Simplified_1',
+                opacity: 1.0,
+                color: powFront,
+                dashArray: '',
+                lineCap: 'round',
+                lineJoin: 'round',
+                weight: 1.2, 
+                fill: true,
+                fillOpacity: 0,
+                fillColor: 'rgba(200,162,240,0.0)',
+				interactive: false,
+            }
+        }
+		function style_Powiaty_Simplified_3_0() {
+            return {
+                pane: 'pane_Powiaty_Simplified_1',
+                opacity: 0,
+                color: 'rgba(224, 224, 224, 0.0)',
+                dashArray: '',
+                lineCap: 'round',
+                lineJoin: 'round',
+                weight: 0, 
+                fill: true,
+                fillOpacity: 0,
+                fillColor: 'rgba(200,162,240,0.0)',
+				interactive: false,
+            }
+        }
+        map.createPane('pane_Powiaty_Simplified_1');
+        map.getPane('pane_Powiaty_Simplified_1').style.zIndex = 403;
+        //map.getPane('pane_Powiaty_Simplified_1').style['mix-blend-mode'] = 'normal';
+		L.Polygon.include({
+			_update: function () {
+				if (!this._map) { return; }
+
+				this._clipPoints();
+				this._simplifyPoints();
+				this._updatePath();
+				this.fire('reclipped', {parts: this._parts})
+			}
+		});
+		var lab_centers = [];
+        var layer_Powiaty_Simplified_1 = new L.geoJson(json_Powiaty_Simplified_1, {
+            pane: 'pane_Powiaty_Simplified_1',
+            onEachFeature: function(feat, poly){
+				//rank_Powiaty;
+				var center;
+				poly.on('reclipped', function(ev) {
+					//console.log(ev);
+					var parts = ev.parts.map(function(ring){
+						return ring.map(function(point){
+							if ('x' in point) {
+								return [point.x, point.y]
+							}
+						});
+					});
+
+					if (!parts.length) {
+						// Polygon not visible
+						if (center) center.remove();
+						return;
+					}
+
+					var centerpoint = polylabel(parts, 4);
+					var centerLatLng = map.layerPointToLatLng(centerpoint);
+					//console.log(feat.properties.JPT_NAZWA_, parts, centerpoint, centerLatLng);
+
+					/*if (center) {center.setLatLng(centerLatLng).addTo(map)} 
+					else { center = L.circleMarker(centerLatLng, {color: 'red', radius:10}).addTo(map)}*/
+					lab_centers.push(centerLatLng);
+				})
+			},
+			
+            style: style_Powiaty_Simplified_1_0,
+        });
+		
+		var layer_Powiaty_Simplified_3 = new L.geoJson(json_Powiaty_Simplified_1, {
+            pane: 'pane_Powiaty_Simplified_1',
+            //onEachFeature: rank_Powiaty,
+			
+            style: style_Powiaty_Simplified_3_0,
+        });
+		/*layer_Powiaty_Simplified_1.eachLayer(function(layer) {
+			pow_ats2[layer.feature.properties.JPT_KOD_JE] = layer;
+        });
+		console.log(pow_ats2);*/
+        //bounds_group.addLayer(layer_Powiaty_Simplified_1);
+       // map.addLayer(layer_Powiaty_Simplified_1);
+		
+		function style_Powiaty_Simplified_2_0() {
+            return {
+                pane: 'pane_Powiaty_Simplified_2',
+                opacity: 1.0,
+                color: powBack,
+                dashArray: '',
+                lineCap: 'round',
+                lineJoin: 'round',
+                weight: 1.8, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(200,162,240,0.0)',
+				interactive: false,
+            }
+        }
+        map.createPane('pane_Powiaty_Simplified_2');
+        map.getPane('pane_Powiaty_Simplified_2').style.zIndex = 401;
+        map.getPane('pane_Powiaty_Simplified_2').style['mix-blend-mode'] = 'normal';
+        var layer_Powiaty_Simplified_2 = new L.geoJson(json_Powiaty_Simplified_1, {
+            attribution: '<a href=""></a>',
+            pane: 'pane_Powiaty_Simplified_2',
+			//onEachFeature: list_Powiaty_Simplified_2,
+            style: style_Powiaty_Simplified_2_0,
+        });
+        //bounds_group.addLayer(layer_Powiaty_Simplified_2);
+        //map.addLayer(layer_Powiaty_Simplified_2);
+		
+		//powList.sort();
+		
+		
+        function pop_Granicewojewdztw_1(feature, layer) {
+            wojewods[feature.properties.Wojewod] = layer;
+        }
+		function pop_Granicewojewdztw_2(layer) {
+            wojewods2[layer.feature.properties.Wojewod] = layer;
+        }
+
+        function style_Granicewojewdztw_2_0() {
+            return {
+                pane: 'pane_Granicewojewdztw_2',
+                opacity: 1.0,
+                color: wojFront,
+                dashArray: '',
+                lineCap: 'round',
+                lineJoin: 'round',
+                weight: 2.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(200,162,240,0.0)',
+				interactive: false,
+            }
+        }
+        map.createPane('pane_Granicewojewdztw_2');
+        map.getPane('pane_Granicewojewdztw_2').style.zIndex = 404;
+        //map.getPane('pane_Granicewojewdztw_2').style['mix-blend-mode'] = 'normal';
+        var layer_Granicewojewdztw_2 = new L.geoJson(json_Granicewojewdztw_2 , {
+            attribution: '<a href=""></a>',
+            pane: 'pane_Granicewojewdztw_2',
+            //onEachFeature: rank_Wojewod,
+            style: style_Granicewojewdztw_2_0,
+        });
+		/*layer_Granicewojewdztw_2.eachLayer(function(layer) {
+			pop_Granicewojewdztw_2(layer);
+        });*/
+        //bounds_group.addLayer(layer_Granicewojewdztw_2);
+        //map.addLayer(layer_Granicewojewdztw_2);
+		
+		
+		
+		function style_Granicewojewdztw_1_0() {
+            return {
+                pane: 'pane_Granicewojewdztw_1',
+                opacity: 1.0,
+                color: wojBack,
+                dashArray: '',
+                lineCap: 'round',
+                lineJoin: 'round',
+                weight: 3.2, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(200,162,240,0.0)',
+				interactive: false,
+            }
+        }
+        map.createPane('pane_Granicewojewdztw_1');
+        map.getPane('pane_Granicewojewdztw_1').style.zIndex = 402;
+        //map.getPane('pane_Granicewojewdztw_1').style['mix-blend-mode'] = 'normal';
+		var layer_Granicewojewdztw_1 = new L.geoJson(json_Granicewojewdztw_2 , {
+            attribution: '<a href=""></a>',
+            pane: 'pane_Granicewojewdztw_1',
+			//onEachFeature: pop_Granicewojewdztw_1,
+            style: style_Granicewojewdztw_1_0,
+        });
+		
+		
+		function resetBorders(){
+			var zzoom = map.getZoom();
+			var wweight = Math.pow((1.4+(Math.pow((10-zzoom),2)-5)/49),(zzoom-6));
+			layer_Granicewojewdztw_1.setStyle({color: wojBack, weight: wweight*2.8, fillPattern: patt_blank});
+			layer_Granicewojewdztw_2.setStyle({color: wojFront, weight: wweight*1.96, fillPattern: patt_blank});
+			
+			layer_Powiaty_Simplified_2.setStyle({color: powBack, weight: wweight*1.8, fillPattern: patt_blank});
+			layer_Powiaty_Simplified_1.setStyle({color: powFront, weight: wweight*1.2, fillPattern: patt_blank});
+		}
+		
+		var Powiaty = L.layerGroup([layer_Powiaty_Simplified_1, layer_Powiaty_Simplified_2]);
+		var Wojewod = L.layerGroup([layer_Granicewojewdztw_1, layer_Granicewojewdztw_2 ]);
+		
+		var bounds_group = new L.featureGroup([]);
+		bounds_group.addLayer(Powiaty);
+        map.addLayer(Powiaty);
+		bounds_group.addLayer(Wojewod);
+        map.addLayer(Wojewod);
+		/*map = L.map('map', {
+            zoomControl:true, maxZoom:8, minZoom:6, layers: [basemap0, layer_Gminy20]
+        }).fitBounds([[48.7066734906,11.9596852528],[54.6789300376,27.5634833614]]);*/
+		//map.addLayer(osm);
+		
+		var i = 0;
+		var lbl = [];
+		
+		layer_Powiaty_Simplified_1.eachLayer(function(layer) {
+            var context = {
+                feature: layer.feature,
+                variables: {}
+            };
+			
+			//var p = layer.getBounds().getCenter();
+			
+			lbl[i] = layer.bindTooltip((label_Powiaty_Simplified_1_eval_expression(context) !== null?String('<div style="color: #fff; font-size: 8.5pt; font-weight: bold; box-shadow: 0 0 15px rgba(0,0,0,0.25); text-align: center; text-shadow: rgba(80,80,80,0.75) 2px 0px 0px, rgba(80,80,80,0.75) 1.75px 0.966667px 0px, rgba(80,80,80,0.75) 1.08333px 1.68333px 0px, rgba(80,80,80,0.75) 0.133333px 2px 0px, rgba(80,80,80,0.75) -0.833333px 1.81667px 0px, rgba(80,80,80,0.75) -1.6px 1.2px 0px, rgba(80,80,80,0.75) -1.98333px 0.283333px 0px, rgba(80,80,80,0.75) -1.86667px -0.7px 0px, rgba(80,80,80,0.75) -1.3px -1.51667px 0px, rgba(80,80,80,0.75) -0.416667px -1.95px 0px, rgba(80,80,80,0.75) 0.566667px -1.91667px 0px, rgba(80,80,80,0.75) 1.41667px -1.41667px 0px, rgba(80,80,80,0.75) 1.91667px -0.566667px 0px; font-family: \'MS Shell Dlg 2\', sans-serif">' + label_Powiaty_Simplified_1_eval_expression(context)) + '</div>':''), {pane: 'labels', permanent: true, offset: [0, 0], className: 'css_Powiaty_Simplified_1', direction:"center", opacity:0.9}).openTooltip(lab_centers[i]);
+            labels.push(layer);
+            totalMarkers += 1;
+            layer.added = true;
+            addLabel(layer, i);
+            i++;
+        });
+		
+		zoomToLabels();
+		
+       var hash = new L.Hash(map);
+        map.attributionControl.addAttribution('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a>');
+		
+        //basemap0.addTo(map);
+		//L.control.locate().addTo(map);
+		
+       
+        
+        //bounds_group.addLayer(layer_Gminy20);
+      //map.addLayer(layer_Gminy20);
+        //setBounds();
+
+		/*var mapLayer1 = L.layerGroup([layer_Gminy20, layer_Okregi_KO]).addTo(map);
+		var mapLayer2 = L.layerGroup([layer_Gminy20, layer_Gminy15]);
+		var mapLayer3 = L.layerGroup([layer_Gminy20, layer_Gminy10]);
+		var mapLayer4 = L.layerGroup([layer_Gminy20, layer_Gminy05]);*/
+		var baseMaps = {
+			/*'<img src="legend/PiS.png" alt ="PiS"  class="Logo"/> KOMITET WYBORCZY PRAWO I SPRAWIEDLIWOŚĆ': layer_Gminy20,*/
+			'2020': layer_Gminy20,
+			'2015': layer_Gminy15 ,
+			'2010': layer_Gminy10 ,
+			'2005': layer_Gminy05 
+		};
+		
+		/*L.control.layers(baseMaps,null,{collapsed:false}).addTo(map);*/
+		
+		/*map.removeLayer(layer_Okregi_KO
+		map.removeLayer(layer_Gminy15);
+		map.removeLayer(layer_Gminy10);
+		map.removeLayer(layer_Gminy05);
+		map.removeLayer(layer_Gminy15*/
+		//map.removeLayer(mapLayer1);
+		/*map.removeLayer(mapLayer2);
+		map.removeLayer(mapLayer3);
+		map.removeLayer(mapLayer4);*/
+		//L.control.sideBySide([layer_Gminy20],[layer_Okregi_KO, layer_Gminy15, layer_Gminy10, layer_Gminy05]).addTo(map);
+		
+		var layerControl = L.control.layers(baseMaps,{'<img src="legend/Granicewojewdztw_2.png" /> Granice województw': Wojewod,'<img src="legend/Powiaty_Simplified_1.png" /> Granice powiatów': Powiaty},{collapsed:true}).addTo(map);
+		
+		L.Control.Watermark = L.Control.extend({
+			onAdd: function(map) {
+				var img = L.DomUtil.create('img');
+
+				img.src = './images/2020.png';
+				img.id = 'years';
+				img.style.width = '150px';
+				img.style.opacity= '0.9';
+				//margin-bottom: -60px;
+				img.style.margin= '0px 0px 0px 0px';
+
+				return img;
+			},
+
+			onRemove: function(map) {
+				// Nothing to do here
+			}
+		});
+		
+		L.control.watermark = function(opts) {
+			return new L.Control.Watermark(opts);
+		}
+
+		L.control.watermark({ position: 'bottomleft' }).addTo(map);
+		
+		var lastZoom;
+		
+		function zoomToLabels(){
+			
+			var zoom = map.getZoom();
+			/*layer_10.setStyle({color: 'rgba(64,64,64,'+(0.25+(zoom-5)*0.1)+')'});
+			layer_15.setStyle({color: 'rgba(64,64,64,'+(0.25+(zoom-5)*0.1)+')'});
+			layer_20.setStyle({color: 'rgba(64,64,64,'+(0.25+(zoom-5)*0.1)+')'});
+			layer_1510.setStyle({color: 'rgba(64,64,64,'+(0.25+(zoom-5)*0.1)+')'});
+			layer_2015.setStyle({color: 'rgba(64,64,64,'+(0.25+(zoom-5)*0.1)+')'});
+			layer_2010.setStyle({color: 'rgba(64,64,64,'+(0.25+(zoom-5)*0.1)+')'});
+			layer_1510c.setStyle({color: 'rgba(64,64,64,'+(0.25+(zoom-5)*0.1)+')'});
+			layer_2015c.setStyle({color: 'rgba(64,64,64,'+(0.25+(zoom-5)*0.1)+')'});
+			layer_2010c.setStyle({color: 'rgba(64,64,64,'+(0.25+(zoom-5)*0.1)+')'});*/
+			layer_current.setStyle({color: 'rgba(64,64,64,'+(0.25+(zoom-5)*0.1)+')'});
+			//if($select.val()=='Polska'){
+				if (zoom < tooltipThreshold/* && (!lastZoom || lastZoom >= tooltipThreshold)*/) {
+					map.getPane('labels').style.display = 'none';
+					
+				} else if (zoom >= tooltipThreshold/* && (!lastZoom || lastZoom < tooltipThreshold)*/) { 
+					map.getPane('labels').style.display = 'inline-block';
+					map.getPane('labels').style['text-align'] = 'center';
+				}
+				if (zoom < tooltipThreshold){
+					$('path.stroke-polyline').css('mix-blend-mode', 'normal');
+				}else{
+					$('path.stroke-polyline').css('mix-blend-mode', 'multiply');
+				}
+			//}
+			selected = false;
+			lastZoom = zoom;
+			
+			var i = 0;
+			setTimeout(function () {
+				layer_Powiaty_Simplified_1.eachLayer(function(layer) {
+					var slbl = lbl[i].getTooltip();
+					slbl.setLatLng(lab_centers[i]);
+					i++;
+				});
+				resetLabels([layer_Powiaty_Simplified_1]);
+				
+			},50);
+		}
+		
+		map.on('baselayerchange', function (eventLayer) {
+			layer_current = eventLayer.layer;
+			eventLayer.layer.eachLayer(function(layer) {
+				onEachFeature(layer.feature, layer);
+			});
+			switch(eventLayer.name){
+				case '2005':
+					document.getElementById("years").src="./images/2005.png";
+					break;
+				case '2010':
+					document.getElementById("years").src="./images/2010.png";
+					break;
+				case '2015':
+					document.getElementById("years").src="./images/2015.png";
+					break;
+				case '2020':
+					document.getElementById("years").src="./images/2020.png";
+					break;
+				default:
+					document.getElementById("years").src="./images/2020.png";
+					break;
+			}
+		})
+		/*$('.leaflet-control-layers').on('mouseleave', () => {
+			layerControl.collapse();
+		});
+		$('.leaflet-control-layers-toggle').on('mouseenter', () => {
+			layerControl.expand();
+		});*/
+		
+		/*var lc = document.getElementsByClassName('leaflet-control-layers');
+		lc[0].style.visibility = 'hidden';*/
+		
+		/*$('.leaflet-control-layers').hide();*/
+		
+        //setBounds();
+		
+		map.on('zoomend', function () {
+			//var zoomLevel = map.getZoom();
+			var currentZoom = map.getZoom();
+			map.getPane('pane_Gminy20').style['mix-blend-mode'] = blend_modes[currentZoom-5];
+			var lzoom = zooms[currentZoom-6];
+			layer_Powiaty_Simplified_1.setStyle({weight: lzoom*1.0});
+			layer_Powiaty_Simplified_2.setStyle({weight: lzoom*1.5});
+			layer_Granicewojewdztw_2.setStyle({weight: lzoom*1.8});
+			layer_Granicewojewdztw_1.setStyle({weight: lzoom*2.7});
+			
+			zoomToLabels();
+		});
+		//map.getPane('label21').style.padding = '0px 0px 0px 0px';
+		//console.log(map.getPane('label21'));
+		
+        //resetLabels([layer_Gminy20, layer_Okregi_KO, layer_Gminy15, layer_Gminy10, layer_Gminy05]);
+		//resetLabels([layer_Okregi_KO]);
+		/*map.on('baselayerchange', function (eventLayer) {
+			console.log(eventLayer.name);
+			// Switch to the Population legend...
+			if (eventLayer.name === '<img src="legend/PiS.png" alt ="PiS"  class="Logo"/> KOMITET WYBORCZY PRAWO I SPRAWIEDLIWOŚĆ') {
+				L.control.sideBySide(layer_Okregi_KO, layer_Gminy20).addTo(map);
+			} else if (eventLayer.name === '<img src="legend/KO.png" alt="KO"   class="Logo"/> KOALICYJNY KOMITET WYBORCZY KOALICJA OBYWATELSKA PO .N IPL ZIELONI') {
+				L.control.sideBySide(layer_Gminy20, layer_Okregi_KO).addTo(map);
+			} else if (eventLayer.name === '<img src="legend/Lewica.jpg" alt="Lewica"   class="Logo"/> KOMITET WYBORCZY SOJUSZ LEWICY DEMOKRATYCZNEJ') {
+				L.control.sideBySide(layer_Gminy20, layer_Gminy15).addTo(map);
+			} else if (eventLayer.name === '<img src="legend/PSL.png" alt="PSL"   class="Logo"/> KOMITET WYBORCZY POLSKIE STRONNICTWO LUDOWE') {
+				L.control.sideBySide(layer_Gminy20, layer_Gminy10).addTo(map);
+			} else{ // Or switch to the Population Change legend...
+				L.control.sideBySide(layer_Gminy20, layer_Gminy05).addTo(map);
+			}
+		});*/
+        /*map.on("zoomend", function(){
+			var zoom = map.getZoom();
+			var offset = 16*Math.pow(2,zoom-6);
+			var offset = -16*Math.pow(2,zoom-6);
+            resetLabels([layer_Gminy20]);
+			resetLabels([layer_Okregi_KO]);
+			resetLabels([layer_Gminy15]);
+			resetLabels([layer_Gminy10]);
+			resetLabels([layer_Gminy05]);
+			map.getPane('label21').style.left = offset+'px';
+			//map.getPane('label21').style.outline = '5px solid red';
+			console.log(map.getPane('label21'));
+        });
+        map.on("layeradd", function(){
+            resetLabels([layer_Gminy20]);
+			resetLabels([layer_Okregi_KO]);
+			resetLabels([layer_Gminy15]);
+			resetLabels([layer_Gminy10]);
+			resetLabels([layer_Gminy05]);
+        });
+        map.on("layerremove", function(){
+            resetLabels([layer_Gminy20]);
+			resetLabels([layer_Okregi_KO]);
+			resetLabels([layer_Gminy15]);
+			resetLabels([layer_Gminy10]);
+			resetLabels([layer_Gminy05]);
+        });*/
+		//map.on('zoomend', function());
+		//show_hide_labels();
+		</script>
+    </body>
+</html>
