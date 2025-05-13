@@ -725,6 +725,12 @@
 		
 		var layerControl = L.control.layers(baseMaps,{'<img src="legend/Granicewojewdztw_2.png" /> Granice województw': Wojewod,'<img src="legend/Powiaty_Simplified_1.png" /> Granice powiatów': Powiaty},{collapsed:true}).addTo(map);
 		
+		//leaflet-control-layers-base
+		var target = document.querySelector(".leaflet-control-layers-base");
+		var subtarget = target.querySelector('label:nth-of-type(4) > div > span');
+		var myNewStuff = '<div><img id = "div_scale" src = "./images/Diverging scale.png"></div>';
+		subtarget.innerHTML = subtarget.innerHTML + myNewStuff;
+		
 		L.Control.Watermark = L.Control.extend({
 			onAdd: function(map) {
 				var img = L.DomUtil.create('img');

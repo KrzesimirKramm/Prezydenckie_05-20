@@ -984,3 +984,8 @@ rgb(182, 222, 135)
 	filter: drop-shadow(2px 2px 4px #ccc);
 	
 }
+
+#div_scale{
+	filter: drop-shadow(2px 2px 4px #ccc);
+	width: 256px;
+}
