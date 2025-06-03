@@ -95,13 +95,14 @@
 			//console.log(feature);
 			var p = layer.feature.properties;
 			var mun_type = p.JPT_KOD_JE.substring(6, 7) !== "1"? 'gm. ' : 'm. ';
+			var a5 =feature.properties['pis25']/(feature.properties['po25']+feature.properties['pis25'])*100;
 			var a4 =feature.properties['pis20']/(feature.properties['po20']+feature.properties['pis20'])*100;
-			//console.log(a1);
 			var a3 =feature.properties['pis15']/(feature.properties['po15']+feature.properties['pis15'])*100;
 			var a2 =feature.properties['pis10']/(feature.properties['po10']+feature.properties['pis10'])*100;;
 			var a1 =feature.properties['pis05']/(feature.properties['po05']+feature.properties['pis05'])*100;;
             var popupContent = ' <h2 style = "margin: 8px;">'+mun_type + String(feature.properties['JPT_NAZWA_'])+'</h2>\
 			<div>\
+			<div class = "big_pasek"><span class="year">2025</span><div class = "pasek" style = "background-image: linear-gradient( 90deg, #053061 0%, #053061 '+Number(a5).toFixed(1)+'%, #7f3b08 '+Number(a5).toFixed(1)+'%, #7f3b08 '+Number(a5).toFixed(1)+'%);"><span class = "PiS_k">K. Nawrocki<br>'+Number(a5).toFixed(1)+'%</span><div class = "vl"></div><span class = "PO_k">R. Trzaskowski<br>'+Number(100-a5).toFixed(1)+'%</span><div style="clear:both;"></div></div></div>\
 			<div class = "big_pasek"><span class="year">2020</span><div class = "pasek" style = "background-image: linear-gradient( 90deg, #053061 0%, #053061 '+Number(a4).toFixed(1)+'%, #7f3b08 '+Number(a4).toFixed(1)+'%, #7f3b08 '+Number(a4).toFixed(1)+'%);"><span class = "PiS_k">A. Duda<br>'+Number(a4).toFixed(1)+'%</span><div class = "vl"></div><span class = "PO_k">R. Trzaskowski<br>'+Number(100-a4).toFixed(1)+'%</span><div style="clear:both;"></div></div></div>\
 			<div class = "big_pasek"><span class="year">2015</span><div class = "pasek" style = "background-image: linear-gradient( 90deg, #053061 0%, #053061 '+Number(a3).toFixed(1)+'%, #7f3b08 '+Number(a3).toFixed(1)+'%, #7f3b08 '+Number(a3).toFixed(1)+'%);"><span class = "PiS_k">A. Duda<br>'+Number(a3).toFixed(1)+'%</span><div class = "vl"></div><span class = "PO_k">B. Komorowski<br>'+Number(100-a3).toFixed(1)+'%</span><div style="clear:both;"></div></div></div>\
 			<div class = "big_pasek"><span class="year">2010</span><div class = "pasek" style = "background-image: linear-gradient( 90deg, #053061 0%, #053061 '+Number(a2).toFixed(1)+'%, #7f3b08 '+Number(a2).toFixed(1)+'%, #7f3b08 '+Number(a2).toFixed(1)+'%);"><span class = "PiS_k">J. Kaczyński<br>'+Number(a2).toFixed(1)+'%</span><div class = "vl"></div><span class = "PO_k">B. Komorowski<br>'+Number(100-a2).toFixed(1)+'%</span><div style="clear:both;"></div></div></div>'+(feature.properties['po05'] == 0?'':'<div class = "big_pasek"><span class="year">2005</span><div class = "pasek" style = "background-image: linear-gradient( 90deg, #053061 0%, #053061 '+Number(a1).toFixed(1)+'%, #7f3b08 '+Number(a1).toFixed(1)+'%, #7f3b08 '+Number(a1).toFixed(1)+'%);"><span class = "PiS_k">L. Kaczyński<br>'+Number(a1).toFixed(1)+'%</span><div class = "vl"></div><span class = "PO_k">D. Tusk<br>'+Number(100-a1).toFixed(1)+'%</span><div style="clear:both;"></div></div></div>')+'<div>';
@@ -129,7 +130,28 @@
                 </table>';
             layer.bindPopup(popupContent, {maxHeight: 800});
         }
-
+		
+		function style_Gminy25(feature) {
+			var p = feature.properties;
+            if (feature.properties['po25'] != 0 ) {
+                return {
+                /*pane: 'pane_Gminy20',*/
+                opacity: 1.0,
+                //color: feature.properties["rgb2010"],
+                color: 'rgba(64,64,64,'+(0.25+(a_zoom-5)*0.1)+')',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 0.32, 
+                fill: true,
+                fillOpacity: 1.0,
+				className: 'stroke-polyline',
+                fillColor: p['pis25']/(p['pis25']+p['po25'])>0.5?d3.interpolateBlues(Math.pow((p['pis25']/(p['pis25']+p['po25'])-0.5)*2,0.75)):d3.interpolateOranges(Math.pow((p['po25']/(p['pis25']+p['po25'])-0.5)*2,0.75))
+                //fillColor: '#ff8080'
+				}
+            }
+		}
+		
         function style_Gminy20(feature) {
 			var p = feature.properties;
             if (feature.properties['po20'] != 0 ) {
@@ -338,15 +360,21 @@
         map.getPane('pane_Gminy20').style.zIndex = 401;
         map.getPane('pane_Gminy20').style['mix-blend-mode'] = 'normal';
 		
+		var layer_Gminy25 = new L.geoJson(json_Gminy_0, {
+            pane: 'pane_Gminy20',
+            onEachFeature: pop_Gminy20,
+            style: style_Gminy25
+        }).addTo(map);
+		
 		var layer_Gminy20 = new L.geoJson(json_Gminy_0, {
             pane: 'pane_Gminy20',
             onEachFeature: pop_Gminy20,
             style: style_Gminy20
-        }).addTo(map);
+        });
 		
 		
 		
-		var layer_current = layer_Gminy20;
+		var layer_current = layer_Gminy25;
 		
 		layer_current.eachLayer(function(layer) {
 			onEachFeature(layer.feature, layer);
@@ -704,6 +732,7 @@
 		var mapLayer4 = L.layerGroup([layer_Gminy20, layer_Gminy05]);*/
 		var baseMaps = {
 			/*'<img src="legend/PiS.png" alt ="PiS"  class="Logo"/> KOMITET WYBORCZY PRAWO I SPRAWIEDLIWOŚĆ': layer_Gminy20,*/
+			'2025': layer_Gminy25,
 			'2020': layer_Gminy20,
 			'2015': layer_Gminy15 ,
 			'2010': layer_Gminy10 ,
@@ -727,7 +756,7 @@
 		
 		//leaflet-control-layers-base
 		var target = document.querySelector(".leaflet-control-layers-base");
-		var subtarget = target.querySelector('label:nth-of-type(4) > div > span');
+		var subtarget = target.querySelector('label:nth-of-type(5) > div > span');
 		var myNewStuff = '<div><img id = "div_scale" src = "./images/Diverging scale.png"></div>';
 		subtarget.innerHTML = subtarget.innerHTML + myNewStuff;
 		
@@ -735,7 +764,7 @@
 			onAdd: function(map) {
 				var img = L.DomUtil.create('img');
 
-				img.src = './images/2020.png';
+				img.src = './images/2025.png';
 				img.id = 'years';
 				img.style.width = '150px';
 				img.style.opacity= '0.9';
@@ -818,8 +847,11 @@
 				case '2020':
 					document.getElementById("years").src="./images/2020.png";
 					break;
+				case '2025':
+					document.getElementById("years").src="./images/2025.png";
+					break;
 				default:
-					document.getElementById("years").src="./images/2020.png";
+					document.getElementById("years").src="./images/2025.png";
 					break;
 			}
 		})
